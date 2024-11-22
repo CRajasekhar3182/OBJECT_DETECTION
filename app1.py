@@ -211,3 +211,5 @@ else:
 
 # Footer Section - Add the text about contributors
 st.markdown('<div class="footer">Prepared by Rajasekhar Naidu and Purendeeswar Reddy</div>', unsafe_allow_html=True)
+import cv2
+print(cv2.__version__)
