@@ -123,6 +123,12 @@ st.markdown("""
             width: 80%;
             margin: 0 auto;
         }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 16px;
+            color: #7f8c8d;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -202,3 +208,6 @@ if uploaded_file is not None:
 
 else:
     st.warning("Please upload an image to get started.")
+
+# Footer Section - Add the text about contributors
+st.markdown('<div class="footer">Prepared by Rajasekhar Naidu and Purendeeswar Reddy</div>', unsafe_allow_html=True)
