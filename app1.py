@@ -9,6 +9,12 @@ import base64
 default_threshold = 0.4
 image_size = 320
 
+# Convert Hex to BGR (OpenCV format)
+def hex_to_bgr(hex_color):
+    hex_color = hex_color.lstrip('#')
+    rgb = [int(hex_color[i:i+2], 16) for i in (0, 2, 4)]
+    return (rgb[2], rgb[1], rgb[0])  # OpenCV uses BGR instead of RGB
+
 # Define YOLO function to get bounding boxes
 def best_bounding_boxes(output_nn, threshold):
     bounding_box_locations = []
@@ -29,7 +35,7 @@ def best_bounding_boxes(output_nn, threshold):
     final_bounding_box = cv2.dnn.NMSBoxes(bounding_box_locations, confidence_, threshold, 0.5)
     return final_bounding_box, bounding_box_locations, confidence_, class_ids
 
-def final_detection(final_box, all_box, acc, classes_index, height_ratio, width_ratio, car_image, total_class_names):
+def final_detection(final_box, all_box, acc, classes_index, height_ratio, width_ratio, car_image, total_class_names, show_confidence, box_color, text_color):
     for p in final_box:
         x, y, w, h = all_box[p]
         x = int(x * width_ratio)
@@ -38,10 +44,11 @@ def final_detection(final_box, all_box, acc, classes_index, height_ratio, width_
         h = int(h * width_ratio)
 
         label = str(total_class_names[classes_index[p]])
-        conf_ = str(round(acc[p], 2))
+        conf_ = str(round(acc[p], 2)) if show_confidence else ""
         font = cv2.FONT_HERSHEY_PLAIN
-        cv2.putText(car_image, label + ' ' + conf_, (x, y - 2), font, 2, (0, 255, 0), 2)
-        cv2.rectangle(car_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        # Use BGR colors for OpenCV
+        cv2.putText(car_image, label + ' ' + conf_, (x, y - 2), font, 2, text_color, 2)
+        cv2.rectangle(car_image, (x, y), (x + w, y + h), box_color, 2)
 
 # Load YOLO network and class labels
 yolo_neural_network = cv2.dnn.readNetFromDarknet('yolov3.cfg.txt', 'yolov3.weights')
@@ -177,39 +184,29 @@ if uploaded_file is not None:
         height_ratio = image_height / image_size
         width_ratio = image_width / image_size
 
-        # Add a slider for adjusting the detection threshold
+        # Add sliders for adjusting features
         threshold = st.slider("Detection Confidence Threshold", 0.0, 1.0, default_threshold, 0.01)
+        show_confidence = st.checkbox("Show Confidence Scores", value=True)
+        box_color = st.color_picker("Bounding Box Color", "#FF0000")
+        text_color = st.color_picker("Text Color", "#00FF00")
+
+        # Convert selected colors to BGR
+        box_color_bgr = hex_to_bgr(box_color)
+        text_color_bgr = hex_to_bgr(text_color)
 
         # Make prediction using YOLO
         yolo_neural_network.setInput(input_image_blob)
         outputs_from_nn = yolo_neural_network.forward(proper_layer_index)
 
-        # Get the bounding boxes and other details
-        final_box, bounding_boxes, confidence_, class_index = best_bounding_boxes(outputs_from_nn, threshold)
+        # Get bounding boxes for detected objects
+        final_box, all_box, acc, class_ids = best_bounding_boxes(outputs_from_nn, threshold)
 
-        # Draw the final bounding boxes on the image
-        final_detection(final_box, bounding_boxes, confidence_, class_index, height_ratio, width_ratio, car_image, total_class_names)
+        # Display final detection on image
+        final_detection(final_box, all_box, acc, class_ids, height_ratio, width_ratio, car_image, total_class_names, show_confidence, box_color_bgr, text_color_bgr)
 
-        # Display the result image
-        result_image = Image.fromarray(cv2.cvtColor(car_image, cv2.COLOR_BGR2RGB))
+        # Convert the image to PIL format and display it in Streamlit
+        result_image = Image.fromarray(car_image)
         st.image(result_image, caption="Detected Image", use_column_width=True)
 
-        # Download Button
-        img_byte_arr = BytesIO()
-        result_image.save(img_byte_arr, format="PNG")
-        img_byte_arr = img_byte_arr.getvalue()
-
-        st.download_button(
-            label="Download Processed Image",
-            data=img_byte_arr,
-            file_name="processed_image.png",
-            mime="image/png"
-        )
-
-else:
-    st.warning("Please upload an image to get started.")
-
-# Footer Section - Add the text about contributors
-st.markdown('<div class="footer">Prepared by Rajasekhar Naidu and Purendeeswar Reddy</div>', unsafe_allow_html=True)
-import cv2
-print(cv2.__version__)
+# Footer Section
+st.markdown('<div class="footer">Created  ❤️ by Rajasekhar Naidu and Purendeeswareddy | YOLOv3 Object Detection Demo</div>', unsafe_allow_html=True)
